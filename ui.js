@@ -1,4 +1,4 @@
-import { clamp, DEFAULTS, PANEL_LIMITS, entryRows, entryTitle, layoutFloating } from './core.js';
+import { DEFAULTS, PANEL_LIMITS, entryRows, entryTitle, layoutFloating, floatingPosition } from './core.js';
 import { openThemeEditor } from './theme-editor.js';
 
 /** Isolated UI: host themes cannot accidentally break its layout or its switches. */
@@ -461,6 +461,21 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
         actions.append(button('上传图片', () => upload.click(), 'primary'), button('恢复默认图片', () => { settings.image = ''; persist(); position(); state.status = '已恢复默认图片'; message(); }));
         body.append(upload, actions);
         body.append(el('h3', '', '移动位置'), el('p', 'hint', '按住按钮约半秒，再拖到想放的位置。松开后自动保存；窗口变小时会自动留在屏幕内。'));
+        const lockLabel = el('div', 'size-head');
+        lockLabel.append(el('span', 'setting-label', '锁定按钮与面板相对位置'), makeSwitch('锁定按钮与面板相对位置', settings.lockPanel, false, enabled => {
+            const v = viewport();
+            const current = layoutFloating(settings, v);
+            if (enabled) {
+                settings.panelOffsetX = current.panelX - current.x;
+                settings.panelOffsetY = current.panelY - current.y;
+            }
+            settings.lockPanel = enabled;
+            Object.assign(settings, floatingPosition(settings, v, current.x, current.y));
+            persist(); position();
+            state.status = enabled ? '已锁定，长按按钮可一起移动面板' : '已恢复自动展开位置';
+            message();
+        }));
+        body.append(lockLabel, el('p', 'hint', '开启时固定当前相对位置，拖动按钮会带着面板一起走，到边缘一起停下。屏幕变小时会适配可用空间；关闭后恢复自动展开。'));
         body.append(button('重置位置', () => { settings.x = DEFAULTS.x; settings.y = DEFAULTS.y; persist(); position(); state.status = '位置已重置'; message(); }));
         body.append(el('h3', '', '默认管理范围'));
         const scopeLabel = el('label', 'setting-label', '展开面板时使用');
@@ -509,9 +524,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
             }
             return;
         }
-        const v = viewport();
-        settings.x = clamp((event.clientX - drag.dx - v.left - 8) / Math.max(1, v.width - settings.size - 16), 0, 1);
-        settings.y = clamp((event.clientY - drag.dy - v.top - 8) / Math.max(1, v.height - settings.size - 16), 0, 1);
+        Object.assign(settings, floatingPosition(settings, viewport(), event.clientX - drag.dx, event.clientY - drag.dy));
         position();
     });
 
@@ -534,10 +547,10 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
             event.preventDefault();
             const v = viewport();
             const step = event.shiftKey ? 40 : 12;
-            if (event.key === 'ArrowLeft') settings.x = clamp(settings.x - step / Math.max(1, v.width - settings.size - 16), 0, 1);
-            if (event.key === 'ArrowRight') settings.x = clamp(settings.x + step / Math.max(1, v.width - settings.size - 16), 0, 1);
-            if (event.key === 'ArrowUp') settings.y = clamp(settings.y - step / Math.max(1, v.height - settings.size - 16), 0, 1);
-            if (event.key === 'ArrowDown') settings.y = clamp(settings.y + step / Math.max(1, v.height - settings.size - 16), 0, 1);
+            const current = layoutFloating(settings, v);
+            const dx = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0;
+            const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0;
+            Object.assign(settings, floatingPosition(settings, v, current.x + dx, current.y + dy));
             persist(); position();
         }
     }

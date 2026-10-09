@@ -1,6 +1,6 @@
 /** Pure data and geometry helpers shared by the extension and preview. */
 export const SETTINGS_KEY = 'clare_worldbook_float';
-export const DEFAULTS = Object.freeze({ size: 52, image: '', x: 0.93, y: 0.64, scope: 'chat', defaultScope: 'chat', panelWidth: 390, panelHeight: 540, customCss: '' });
+export const DEFAULTS = Object.freeze({ size: 52, image: '', x: 0.93, y: 0.64, scope: 'chat', defaultScope: 'chat', panelWidth: 390, panelHeight: 540, lockPanel: false, panelOffsetX: -398, panelOffsetY: 0, customCss: '' });
 export const PANEL_LIMITS = Object.freeze({
     width: Object.freeze({ min: 300, max: 760 }),
     height: Object.freeze({ min: 320, max: 1000 }),
@@ -22,6 +22,9 @@ export function normalizeSettings(settings = {}) {
         defaultScope: settings.defaultScope === 'global' ? 'global' : 'chat',
         panelWidth: clamp(finite(settings.panelWidth, DEFAULTS.panelWidth), PANEL_LIMITS.width.min, PANEL_LIMITS.width.max),
         panelHeight: clamp(finite(settings.panelHeight, DEFAULTS.panelHeight), PANEL_LIMITS.height.min, PANEL_LIMITS.height.max),
+        lockPanel: settings.lockPanel === true,
+        panelOffsetX: clamp(finite(settings.panelOffsetX, DEFAULTS.panelOffsetX), -2000, 2000),
+        panelOffsetY: clamp(finite(settings.panelOffsetY, DEFAULTS.panelOffsetY), -2000, 2000),
         customCss: typeof settings.customCss === 'string' && settings.customCss.length <= CUSTOM_CSS_LIMIT ? settings.customCss : '',
     };
 }
@@ -36,6 +39,21 @@ export function layoutFloating(settings, viewport) {
     const y = top + gap + settings.y * Math.max(0, height - size - gap * 2);
     const panelWidth = Math.min(settings.panelWidth, Math.max(0, width - gap * 2));
     let panelHeight = Math.min(settings.panelHeight, Math.max(0, height - gap * 2));
+    if (settings.lockPanel) {
+        // Constrain the pair as one object. Narrow viewports may compress the
+        // offset, but the saved offset is retained for when space returns.
+        const offsetX = clamp(settings.panelOffsetX, size - width + gap * 2, width - gap * 2 - panelWidth);
+        const offsetY = clamp(settings.panelOffsetY, size - height + gap * 2, height - gap * 2 - panelHeight);
+        const bounds = {
+            minX: left + gap - Math.min(0, offsetX),
+            maxX: left + width - gap - Math.max(size, offsetX + panelWidth),
+            minY: top + gap - Math.min(0, offsetY),
+            maxY: top + height - gap - Math.max(size, offsetY + panelHeight),
+        };
+        const lockedX = bounds.minX + settings.x * Math.max(0, bounds.maxX - bounds.minX);
+        const lockedY = bounds.minY + settings.y * Math.max(0, bounds.maxY - bounds.minY);
+        return { x: lockedX, y: lockedY, size, panelX: lockedX + offsetX, panelY: lockedY + offsetY, panelWidth, panelHeight, bounds };
+    }
     const roomRight = left + width - x - size - gap * 2;
     const roomLeft = x - left - gap * 2;
     let panelX;
@@ -56,6 +74,16 @@ export function layoutFloating(settings, viewport) {
         panelX: clamp(panelX, left + gap, left + width - panelWidth - gap),
         panelY,
         panelWidth, panelHeight,
+        bounds: { minX: left + gap, maxX: left + width - gap - size, minY: top + gap, maxY: top + height - gap - size },
+    };
+}
+
+/** Convert a desired button position into the current mode's movable range. */
+export function floatingPosition(settings, viewport, x, y) {
+    const { bounds } = layoutFloating(settings, viewport);
+    return {
+        x: clamp((x - bounds.minX) / Math.max(1, bounds.maxX - bounds.minX), 0, 1),
+        y: clamp((y - bounds.minY) / Math.max(1, bounds.maxY - bounds.minY), 0, 1),
     };
 }
 

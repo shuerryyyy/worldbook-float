@@ -1,14 +1,17 @@
 {
   "name": "worldbook-float",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "scripts": {
     "test": "node --test dev/core.test.js dev/bridge.test.js",
     "test:ui": "node dev/ui-test.js",
     "test:integration": "node dev/integration-test.js",
     "test:theme": "node dev/theme-manager-test.js && node dev/theme-editor-test.js",
-    "test:scroll": "node dev/scroll-binding-test.js"
+    "test:scroll": "node dev/scroll-binding-test.js",
+    "test:drag": "node dev/drag-lock-test.js"
   },
-  "devDependencies": { "playwright": "^1.56.0" }
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
 }

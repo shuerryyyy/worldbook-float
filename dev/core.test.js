@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, PANEL_LIMITS, CUSTOM_CSS_LIMIT, normalizeSettings, layoutFloating, setEntryEnabled, createQueue } from '../core.js';
+import { DEFAULTS, PANEL_LIMITS, CUSTOM_CSS_LIMIT, normalizeSettings, layoutFloating, floatingPosition, setEntryEnabled, createQueue } from '../core.js';
 
 test('panel stays visible at every edge, with mobile, zoom and keyboard viewports', () => {
     for (const [width, height, left, top] of [[1440, 900, 0, 0], [390, 844, 0, 0], [320, 568, 0, 0], [844, 390, 0, 0], [390, 280, 0, 0], [280, 300, 100, 70]]) {
@@ -20,6 +20,50 @@ test('on wide screens a right edge button opens to its left, and vice versa', ()
     assert.ok(right.panelX + right.panelWidth < right.x);
     const left = layoutFloating({ ...DEFAULTS, x: 0 }, { width: 1440, height: 900 });
     assert.ok(left.panelX > left.x + left.size);
+});
+
+test('locked button and panel move equally with no independent edge clamping', () => {
+    const viewport = { width: 1440, height: 900 };
+    const settings = { ...DEFAULTS, lockPanel: true, panelOffsetX: -398, panelOffsetY: -100, x: .5, y: .5 };
+    const before = layoutFloating(settings, viewport);
+    const next = { ...settings, ...floatingPosition(settings, viewport, before.x + 20, before.y - 30) };
+    const after = layoutFloating(next, viewport);
+    assert.equal(after.x - before.x, 20);
+    assert.equal(after.panelX - before.panelX, 20);
+    assert.equal(after.y - before.y, -30);
+    assert.equal(after.panelY - before.panelY, -30);
+    const edge = { ...settings, ...floatingPosition(settings, viewport, 10000, -10000) };
+    const atEdge = layoutFloating(edge, viewport);
+    const reverse = layoutFloating({ ...edge, ...floatingPosition(edge, viewport, atEdge.x - 12, atEdge.y + 12) }, viewport);
+    assert.equal(reverse.x - atEdge.x, -12);
+    assert.equal(reverse.y - atEdge.y, 12);
+});
+
+test('locked pair remains visible after viewport, panel and button size changes', () => {
+    for (const [width, height, left, top] of [[1440, 900, 0, 0], [390, 844, 0, 0], [844, 390, 0, 0], [280, 300, 100, 70], [24, 20, 13, 11], [8, 8, 20, 40]]) {
+        for (const panelOffsetX of [-2000, -398, 0, 60, 2000]) for (const panelOffsetY of [-2000, -548, -100, 0, 60, 2000]) {
+            for (const x of [0, .5, 1]) for (const y of [0, .5, 1]) for (const size of [36, 100]) {
+                const settings = { ...DEFAULTS, lockPanel: true, panelOffsetX, panelOffsetY, x, y, size, panelWidth: 760, panelHeight: 1000 };
+                const p = layoutFloating(settings, { width, height, left, top });
+                const context = JSON.stringify({ settings, width, height, p });
+                for (const [px, py, w, h] of [[p.x, p.y, p.size, p.size], [p.panelX, p.panelY, p.panelWidth, p.panelHeight]]) {
+                    assert.ok(px >= left - .001 && py >= top - .001, context);
+                    assert.ok(px + w <= left + width + .001 && py + h <= top + height + .001, context);
+                }
+            }
+        }
+    }
+});
+
+test('lock setting defaults off and retains saved offsets without enabling truthy strings', () => {
+    assert.equal(normalizeSettings({}).lockPanel, false);
+    assert.equal(normalizeSettings({ lockPanel: 'true' }).lockPanel, false);
+    const saved = normalizeSettings({ lockPanel: true, panelOffsetX: -398, panelOffsetY: -100 });
+    assert.equal(saved.lockPanel, true);
+    assert.equal(saved.panelOffsetX, -398);
+    assert.equal(saved.panelOffsetY, -100);
+    assert.deepEqual(normalizeSettings(JSON.parse(JSON.stringify(saved))), saved);
+    assert.equal(normalizeSettings({ panelOffsetX: Infinity }).panelOffsetX, DEFAULTS.panelOffsetX);
 });
 
 test('entry toggle preserves unknown fields, content and imported metadata', () => {

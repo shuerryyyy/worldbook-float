@@ -3,10 +3,14 @@
   "loading_order": 50,
   "js": "index.js",
   "author": "Clare",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "minimum_client_version": "1.13.0",
   "description": "在聊天界面直接管理世界书绑定和条目开关，支持自定义悬浮按钮。",
   "homePage": "https://github.com/shuerryyyy/worldbook-float",
   "auto_update": false,
-  "hooks": { "enable": "onEnable", "disable": "onDisable", "delete": "onDisable" }
+  "hooks": {
+    "enable": "onEnable",
+    "disable": "onDisable",
+    "delete": "onDisable"
+  }
 }
