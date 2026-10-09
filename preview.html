@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>世界书悬浮管理 · 交互预览</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#181c20;color:#e6e5df;font:15px/1.85 'Segoe UI','Microsoft YaHei',sans-serif}header{padding:16px 24px;border-bottom:1px solid #39403c;display:flex;align-items:center;gap:16px}header strong{font-size:17px}header span{font-size:12px;color:#b9c3bd}main{max-width:720px;margin:55px auto;padding:0 24px}article{border-bottom:1px solid #39403c;padding:22px 0}h1{font-size:24px;margin:0 0 6px}p{margin:12px 0}.byline{color:#baddb5;font-size:12px}.intro{color:#b9c3bd;font-size:13px}.input{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:min(680px,calc(100% - 32px));background:#30363a;color:#b9c3bd;padding:12px 18px;border-radius:8px}.synthetic{color:#b9c3bd;font-size:12px}@media(max-width:600px){main{margin-top:28px}header{padding:12px 16px;flex-wrap:wrap;gap:4px 14px}}
+</style></head><body>
+<header><strong>世界书悬浮管理</strong><span>独立交互预览 · 使用虚构演示数据</span></header>
+<main><h1>聊天继续，设定随手调整。</h1><p class="intro">点击右侧书本按钮展开管理；长按约半秒拖动。设置里可以上传图片、调整大小。此页面不会连接或修改你的酒馆。</p>
+<article><div class="byline">旅人</div><p>你推开了旧书店的门。铃声落下时，窗外的雾已经漫过了第三级石阶。</p><p>店主抬起头，把一张折好的地图推到灯下：“如果要去钟楼，最好在下一次涨潮前动身。”</p></article>
+<article><div class="byline">你</div><p>我收起地图，询问钟楼的方向。</p></article><p class="synthetic">上面的对话和面板里的世界书均为演示内容。</p></main>
+<div class="input">演示聊天界面</div>
+<script type="module">const PREVIEW_STYLE = "/* Loaded both by the manifest and inside the isolated shadow root. */\n#clare-worldbook-float { pointer-events: none; }\n:host {\n    --wbf-bg: #24282c;\n    --wbf-surface: #30363a;\n    --wbf-ink: #f1f0e9;\n    --wbf-muted: #b9c3bd;\n    --wbf-line: #434c48;\n    --wbf-accent: #baddb5;\n    --wbf-on-accent: #213322;\n    --wbf-error: #ffb5a9;\n    font-family: var(--mainFontFamily, 'Segoe UI'), 'Microsoft YaHei', sans-serif;\n    color: var(--wbf-ink);\n    font-size: 14px;\n    line-height: 1.5;\n    color-scheme: dark;\n}\n*, *::before, *::after { box-sizing: border-box; }\n[hidden] { display: none !important; }\nbutton, input, select { font: inherit; }\nbutton { cursor: pointer; }\nbutton:disabled, input:disabled { cursor: default; opacity: .5; }\nbutton:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--wbf-accent); outline-offset: 3px; }\n::selection { background: var(--wbf-accent); color: var(--wbf-on-accent); }\ninput { accent-color: var(--wbf-accent); caret-color: var(--wbf-accent); }\n.launcher {\n    position: fixed;\n    z-index: 2;\n    display: grid;\n    place-items: center;\n    padding: 12px;\n    border: 0;\n    border-radius: 50%;\n    background: var(--wbf-accent);\n    box-shadow: 0 5px 18px #0005;\n    pointer-events: auto;\n    touch-action: none;\n    user-select: none;\n    -webkit-user-select: none;\n    -webkit-touch-callout: none;\n}\n.launcher img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }\n.launcher:not(.custom-image) img { filter: brightness(0) saturate(100%); opacity: .82; }\n.launcher.custom-image { padding: 0; background: transparent; box-shadow: none; border-radius: 0; }\n.launcher.dragging { outline: 2px dashed var(--wbf-accent); outline-offset: 5px; cursor: grabbing; }\n.panel {\n    position: fixed;\n    display: flex;\n    flex-direction: column;\n    z-index: 1;\n    min-width: 0;\n    padding: 0;\n    overflow: hidden;\n    border: 0;\n    border-radius: 14px;\n    background: var(--wbf-bg);\n    box-shadow: 0 12px 42px #0007;\n    pointer-events: auto;\n    animation: wbf-reveal 160ms cubic-bezier(.16,1,.3,1);\n}\n.header { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; flex-shrink: 0; }\nh2 { margin: 0; font-size: 19px; line-height: 1.4; font-weight: 650; flex: 1; white-space: nowrap; }\nh3 { margin: 22px 0 6px; font-size: 14px; font-weight: 650; }\n.tools, .setting-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }\n.action, .primary, .retry {\n    border: 0; border-radius: 6px; min-height: 34px; padding: 6px 10px;\n    background: var(--wbf-surface); color: var(--wbf-ink); font-size: 12px;\n}\n.action:hover:not(:disabled), .retry:hover { background: var(--wbf-line); }\n.primary { background: var(--wbf-accent); color: var(--wbf-on-accent); font-weight: 600; }\n.scope { padding: 0 16px 12px; flex-shrink: 0; }\n.tabs { display: inline-flex; gap: 3px; background: var(--wbf-surface); border-radius: 7px; padding: 3px; }\n.tab, .filter { border: 0; background: transparent; color: var(--wbf-muted); padding: 5px 12px; border-radius: 5px; min-height: 30px; font-size: 12px; }\n.tab[aria-pressed='true'] { background: var(--wbf-accent); color: var(--wbf-on-accent); font-weight: 600; }\n.tab:hover:not(:disabled), .filter:hover { color: var(--wbf-ink); }\n.tab[aria-pressed='true']:hover { color: var(--wbf-on-accent); }\n.hint { color: var(--wbf-muted); font-size: 12px; line-height: 1.65; margin: 8px 0 0; }\n.breadcrumb { display: flex; align-items: center; gap: 10px; margin: 0 16px 10px; min-width: 0; flex-shrink: 0; }\n.book-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }\n.breadcrumb .action { flex-shrink: 0; }\n.search { margin: 0 16px; width: calc(100% - 32px); min-height: 38px; border: 1px solid var(--wbf-line); background: transparent; color: var(--wbf-ink); border-radius: 6px; padding: 8px 10px; font-size: 13px; flex-shrink: 0; }\n.search::placeholder { color: var(--wbf-muted); opacity: 1; }\n.filters { display: flex; align-items: center; gap: 3px; margin: 6px 16px; flex-shrink: 0; min-height: 28px; }\n.filter { padding: 4px 9px; }\n.filter[aria-pressed='true'] { color: var(--wbf-accent); background: var(--wbf-surface); }\n.filter-label { display: flex; align-items: center; gap: 7px; color: var(--wbf-muted); font-size: 12px; }\n.filter-label input { margin: 0; width: 14px; height: 14px; }\n.count { margin-left: auto; color: var(--wbf-muted); font-size: 12px; font-variant-numeric: tabular-nums; }\n.list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px; scrollbar-width: thin; scrollbar-color: var(--wbf-line) transparent; }\n.book-row, .entry-row { border-bottom: 1px solid var(--wbf-line); }\n.book-row { display: flex; align-items: center; gap: 12px; min-height: 70px; }\n.book-open { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; gap: 4px; background: transparent; color: var(--wbf-ink); border: 0; padding: 11px 0; }\n.book-open strong { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }\n.book-open:hover strong { color: var(--wbf-accent); }\n.sources { color: var(--wbf-muted); font-size: 11px; }\n.switch { position: relative; display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; height: 40px; cursor: pointer; }\n.switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }\n.track { width: 34px; height: 20px; border-radius: 10px; background: #66706a; pointer-events: none; }\n.track::before { content: ''; display: block; width: 14px; height: 14px; margin: 3px; border-radius: 50%; background: var(--wbf-ink); transition: transform 140ms cubic-bezier(.16,1,.3,1); }\n.switch input:checked + .track { background: var(--wbf-accent); }\n.switch input:checked + .track::before { transform: translateX(14px); background: var(--wbf-on-accent); }\n.switch input:focus-visible + .track { outline: 2px solid var(--wbf-accent); outline-offset: 3px; }\n.switch input:disabled + .track { opacity: .45; }\n.entry-row { padding: 10px 0; }\n.entry-head { display: flex; align-items: flex-start; gap: 12px; }\n.entry-detail { flex: 1; min-width: 0; }\nsummary { cursor: pointer; min-height: 40px; }\nsummary strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }\n.entry-meta { display: block; color: var(--wbf-muted); font-size: 11px; margin-top: 3px; }\n.is-disabled summary strong { color: var(--wbf-muted); }\n.entry-content { padding: 9px 0 4px; }\n.entry-keys { margin: 0 0 8px; color: var(--wbf-accent); font-size: 12px; overflow-wrap: anywhere; }\n.entry-text { font-size: 12px; color: var(--wbf-muted); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; max-height: 220px; overflow-y: auto; scrollbar-width: thin; }\n.empty { padding: 24px 8px; color: var(--wbf-muted); text-align: center; font-size: 13px; }\n.feedback { color: var(--wbf-accent); font-size: 12px; padding: 6px 16px; flex-shrink: 0; overflow-wrap: anywhere; }\n.feedback:empty { display: none; }\n.feedback.error { color: var(--wbf-error); }\n.footer { padding: 9px 16px; font-size: 11px; color: var(--wbf-muted); border-top: 1px solid var(--wbf-line); flex-shrink: 0; }\n.settings-body { flex: 1; min-height: 0; padding: 0 16px 18px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--wbf-line) transparent; }\n.settings-intro { margin: 2px 0 20px; color: var(--wbf-muted); font-size: 13px; }\n.size-head { display: flex; align-items: center; justify-content: space-between; }\n.size-head output { color: var(--wbf-accent); font-size: 12px; font-variant-numeric: tabular-nums; }\n.size-range { width: 100%; margin: 12px 0 0; }\n.scope-select { display: block; width: 100%; margin-top: 8px; min-height: 38px; padding: 6px 10px; border: 1px solid var(--wbf-line); border-radius: 6px; background: var(--wbf-surface); color: var(--wbf-ink); }\n.setting-actions { margin-top: 12px; }\n.settings-body > .action { margin-top: 12px; }\n.retry { display: block; margin: 16px auto; }\n@keyframes wbf-reveal { from { clip-path: inset(0 0 7% 0 round 14px); } to { clip-path: inset(0 round 14px); } }\n@media (max-width: 380px) { .header { padding-right: 12px; padding-left: 12px; } .tools { gap: 4px; } .tools .action { padding: 6px 8px; } }\n@media (max-height: 420px) { .header { padding-top: 8px; padding-bottom: 6px; } .scope { padding-bottom: 6px; } .scope .hint, .footer { display: none; } }\n@media (prefers-reduced-motion: reduce) { .panel { animation: none; } .track::before { transition: none; } }\n";
+/** Pure data and geometry helpers shared by the extension and preview. */
+const SETTINGS_KEY = 'clare_worldbook_float';
+const DEFAULTS = Object.freeze({ size: 52, image: '', x: 0.93, y: 0.64, scope: 'chat', defaultScope: 'chat' });
+
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), Math.max(min, max));
+}
+
+function normalizeSettings(settings = {}) {
+    const finite = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+    return {
+        size: clamp(finite(settings.size, DEFAULTS.size), 36, 100),
+        image: typeof settings.image === 'string' && /^data:image\/(png|jpeg|webp);base64,/.test(settings.image) ? settings.image : '',
+        x: clamp(finite(settings.x, DEFAULTS.x), 0, 1),
+        y: clamp(finite(settings.y, DEFAULTS.y), 0, 1),
+        scope: settings.scope === 'global' ? 'global' : 'chat',
+        defaultScope: settings.defaultScope === 'global' ? 'global' : 'chat',
+    };
+}
+
+/** Positions everything inside the visible viewport, including keyboard/zoom offsets. */
+function layoutFloating(settings, viewport) {
+    const { width, height, left = 0, top = 0 } = viewport;
+    const gap = 8;
+    const size = Math.min(settings.size, Math.max(24, width - gap * 2), Math.max(24, height - gap * 2));
+    const x = left + gap + settings.x * Math.max(0, width - size - gap * 2);
+    const y = top + gap + settings.y * Math.max(0, height - size - gap * 2);
+    const panelWidth = Math.min(390, Math.max(0, width - gap * 2));
+    let panelHeight = Math.min(540, Math.max(0, height - gap * 2));
+    const roomRight = left + width - x - size - gap * 2;
+    const roomLeft = x - left - gap * 2;
+    let panelX;
+    if (roomRight >= panelWidth) panelX = x + size + gap;
+    else if (roomLeft >= panelWidth) panelX = x - panelWidth - gap;
+    else panelX = x + size / 2 - panelWidth / 2;
+    let panelY = clamp(y, top + gap, top + height - panelHeight - gap);
+    if (roomRight < panelWidth && roomLeft < panelWidth) {
+        const above = y - top - gap * 2;
+        const below = top + height - y - size - gap * 2;
+        if (Math.max(above, below) >= 240) {
+            panelHeight = Math.min(panelHeight, Math.max(above, below));
+            panelY = above >= below ? y - panelHeight - gap : y + size + gap;
+        }
+    }
+    return {
+        x, y, size,
+        panelX: clamp(panelX, left + gap, left + width - panelWidth - gap),
+        panelY,
+        panelWidth, panelHeight,
+    };
+}
+
+function entryRows(data) {
+    if (!data?.entries || typeof data.entries !== 'object') return [];
+    return Object.entries(data.entries)
+        .filter(([, entry]) => entry && typeof entry === 'object')
+        .map(([key, entry]) => ({ key, entry }))
+        .sort((a, b) => (Number(a.entry.displayIndex ?? a.entry.uid) || 0) - (Number(b.entry.displayIndex ?? b.entry.uid) || 0));
+}
+
+function entryTitle(entry) {
+    return String(entry.comment || (Array.isArray(entry.key) && entry.key.join('、')) || `未命名条目 #${entry.uid ?? '?'}`);
+}
+
+/** Only the kill switch and its original imported representation may change. */
+function setEntryEnabled(data, key, enabled) {
+    const entry = data.entries?.[key];
+    if (!entry) throw new Error('这个条目已被删除，请刷新后重试。');
+    entry.disable = !enabled;
+    const original = data.originalData?.entries;
+    if (Array.isArray(original)) {
+        const imported = original.find(item => String(item.uid ?? item.id) === String(entry.uid));
+        if (imported) imported.enabled = enabled;
+    }
+    return data;
+}
+
+/** Serializes writes so rapid toggles in one book cannot replace each other's changes. */
+function createQueue() {
+    let tail = Promise.resolve();
+    return operation => {
+        const next = tail.then(operation);
+        tail = next.catch(() => {});
+        return next;
+    };
+}
+
+
+/** Isolated UI: host themes cannot accidentally break its layout or its switches. */
+function mountManager({ bridge, settings, saveSettings, styleText }) {
+    const host = document.createElement('div');
+    host.id = 'clare-worldbook-float';
+    host.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:10000;';
+    const shadow = host.attachShadow({ mode: 'open' });
+    const stylesheet = document.createElement(styleText ? 'style' : 'link');
+    if (styleText) stylesheet.textContent = styleText;
+    else {
+        stylesheet.rel = 'stylesheet';
+        stylesheet.href = new URL('./style.css', import.meta.url).href;
+    }
+    shadow.append(stylesheet);
+    const launcher = el('button', 'launcher');
+    launcher.type = 'button';
+    launcher.setAttribute('aria-label', '打开世界书管理；长按可移动');
+    launcher.setAttribute('aria-expanded', 'false');
+    launcher.setAttribute('aria-controls', 'wbf-panel');
+    launcher.title = '世界书 · 点击展开，长按移动';
+    const picture = el('img');
+    picture.alt = '';
+    picture.draggable = false;
+    launcher.append(picture);
+    const panel = el('section', 'panel');
+    panel.id = 'wbf-panel';
+    panel.hidden = true;
+    panel.setAttribute('aria-label', '世界书管理');
+    const state = { open: false, view: 'books', book: '', data: null, bookQuery: '', entryQuery: '', activeOnly: false, entryFilter: 'all', loading: false, busy: false, error: '', status: '', epoch: 0 };
+    let destroyed = false;
+    let drag;
+    let suppressClickUntil = 0;
+    let syncTimer;
+    shadow.append(panel, launcher);
+    document.body.append(host);
+
+    function el(tag, className = '', text = '') {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text) node.textContent = text;
+        return node;
+    }
+
+    function button(text, action, className = 'action') {
+        const node = el('button', className, text);
+        node.type = 'button';
+        node.addEventListener('click', action);
+        return node;
+    }
+
+    function viewport() {
+        const v = window.visualViewport;
+        return { width: v?.width ?? innerWidth, height: v?.height ?? innerHeight, left: v?.offsetLeft ?? 0, top: v?.offsetTop ?? 0 };
+    }
+
+    function position() {
+        const p = layoutFloating(settings, viewport());
+        Object.assign(launcher.style, { left: `${p.x}px`, top: `${p.y}px`, width: `${p.size}px`, height: `${p.size}px` });
+        Object.assign(panel.style, { left: `${p.panelX}px`, top: `${p.panelY}px`, width: `${p.panelWidth}px`, height: `${p.panelHeight}px` });
+        picture.src = settings.image || new URL('./assets/book-open.svg', import.meta.url).href;
+        launcher.classList.toggle('custom-image', Boolean(settings.image));
+    }
+
+    function persist() { saveSettings({ ...settings }); }
+
+    function setOpen(open, focus = false) {
+        state.open = open;
+        panel.hidden = !open;
+        launcher.setAttribute('aria-expanded', String(open));
+        launcher.setAttribute('aria-label', open ? '收起世界书管理；长按可移动' : '打开世界书管理；长按可移动');
+        if (open) {
+            settings.scope = settings.defaultScope;
+            position();
+            if (state.view === 'entries') void loadBook(state.book);
+            else render();
+            if (focus) panel.querySelector('input,button')?.focus();
+        } else if (focus) launcher.focus();
+    }
+
+    function message() {
+        const node = panel.querySelector('.feedback');
+        if (!node) return;
+        node.textContent = state.error || state.status;
+        node.classList.toggle('error', Boolean(state.error));
+        node.setAttribute('role', state.error ? 'alert' : 'status');
+    }
+
+    async function perform(operation, success, update) {
+        if (state.busy) return;
+        state.busy = true;
+        state.error = '';
+        state.status = '正在保存…';
+        // Keep the clicked control mounted until the request settles, preserving focus
+        // and avoiding duplicate change events from input replacement during a click.
+        panel.querySelectorAll('button,input,select').forEach(control => {
+            if (!control.dataset.allowBusy) control.disabled = true;
+        });
+        message();
+        try {
+            const result = await operation();
+            if (destroyed) return;
+            update?.(result);
+            state.status = success;
+        } catch (error) {
+            state.error = error.message || '保存失败，请重试。';
+            state.status = '';
+        } finally {
+            state.busy = false;
+            if (!destroyed) render();
+        }
+    }
+
+    function toggleBinding(name, enabled) {
+        const scope = settings.scope;
+        void perform(() => bridge.bind(name, scope, enabled), enabled ? (scope === 'chat' ? '已绑定到当前聊天' : '已全局启用') : '已取消此范围的绑定');
+    }
+
+    function makeSwitch(label, checked, disabled, action) {
+        const wrap = el('label', 'switch');
+        const input = el('input');
+        input.type = 'checkbox';
+        input.checked = checked;
+        input.disabled = disabled;
+        input.setAttribute('aria-label', label);
+        const track = el('span', 'track');
+        track.setAttribute('aria-hidden', 'true');
+        input.addEventListener('change', () => action(input.checked));
+        wrap.append(input, track);
+        return wrap;
+    }
+
+    async function loadBook(name) {
+        const epoch = ++state.epoch;
+        state.view = 'entries';
+        state.book = name;
+        state.loading = true;
+        state.data = null;
+        state.error = '';
+        state.status = '';
+        render();
+        try {
+            const data = await bridge.load(name);
+            if (epoch === state.epoch && !destroyed) state.data = data;
+        } catch (error) {
+            if (epoch === state.epoch) state.error = error.message;
+        } finally {
+            if (epoch === state.epoch && !destroyed) {
+                state.loading = false;
+                render();
+            }
+        }
+    }
+
+    function render() {
+        if (destroyed) return;
+        const oldScroll = panel.querySelector('.list')?.scrollTop ?? 0;
+        const openEntries = new Set([...panel.querySelectorAll('details[open]')].map(node => node.dataset.entry));
+        const active = shadow.activeElement;
+        const focusId = active?.dataset.focus;
+        const selection = typeof active?.selectionStart === 'number' ? [active.selectionStart, active.selectionEnd] : null;
+        panel.replaceChildren();
+        const header = el('header', 'header');
+        const title = el('h2', '', state.view === 'settings' ? '悬浮按钮' : '世界书');
+        header.append(title);
+        const tools = el('div', 'tools');
+        const refresh = button('刷新', async () => {
+            if (state.busy || state.loading) return;
+            state.loading = true;
+            state.error = '';
+            state.status = '正在刷新…';
+            render();
+            try {
+                await bridge.refresh();
+                if (destroyed) return;
+                if (state.view === 'entries' && bridge.names().includes(state.book)) {
+                    await loadBook(state.book);
+                } else {
+                    state.view = 'books';
+                    state.status = '列表已刷新';
+                }
+            } catch (error) { state.error = error.message; }
+            finally { state.loading = false; if (!destroyed) render(); }
+        });
+        refresh.disabled = state.busy || state.loading;
+        const options = button(state.view === 'settings' ? '返回' : '设置', () => {
+            state.epoch++;
+            state.loading = false;
+            state.error = '';
+            state.status = '';
+            state.view = state.view === 'settings' ? 'books' : 'settings';
+            render();
+        });
+        options.disabled = state.busy;
+        const close = button('收起', () => setOpen(false, true));
+        close.dataset.allowBusy = 'true';
+        tools.append(refresh, options, close);
+        header.append(tools);
+        panel.append(header);
+        if (state.view === 'settings') renderSettings();
+        else {
+            const scope = el('div', 'scope');
+            const tabs = el('div', 'tabs');
+            tabs.setAttribute('aria-label', '世界书绑定范围');
+            for (const [value, label] of [['chat', '当前聊天'], ['global', '全局']]) {
+                const tab = button(label, () => { settings.scope = value; render(); }, 'tab');
+                tab.setAttribute('aria-pressed', String(settings.scope === value));
+                tab.disabled = state.busy;
+                tabs.append(tab);
+            }
+            scope.append(tabs);
+            scope.append(el('p', 'hint', settings.scope === 'chat' ? (bridge.hasChat() ? '当前聊天可绑定一本书；开启另一本会替换绑定。' : '先打开聊天，即可在这里绑定世界书。') : '此处的总开关影响所有聊天的全局世界书。'));
+            panel.append(scope);
+            if (state.view === 'entries') {
+                const breadcrumb = el('div', 'breadcrumb');
+                const back = button('返回列表', () => { state.epoch++; state.loading = false; state.view = 'books'; state.error = ''; state.status = ''; render(); });
+                back.disabled = state.busy;
+                breadcrumb.append(back, el('strong', 'book-name', state.book));
+                panel.append(breadcrumb);
+            }
+            const search = el('input', 'search');
+            search.type = 'search';
+            search.placeholder = state.view === 'books' ? '搜索世界书名称' : '搜索条目名称、关键词或内容';
+            search.setAttribute('aria-label', search.placeholder);
+            search.dataset.focus = 'search';
+            search.value = state.view === 'books' ? state.bookQuery : state.entryQuery;
+            search.addEventListener('input', () => {
+                if (state.view === 'books') state.bookQuery = search.value;
+                else state.entryQuery = search.value;
+                renderList();
+            });
+            panel.append(search);
+            const filters = el('div', 'filters');
+            if (state.view === 'books') {
+                const label = el('label', 'filter-label');
+                const input = el('input');
+                input.type = 'checkbox'; input.checked = state.activeOnly;
+                input.addEventListener('change', () => { state.activeOnly = input.checked; renderList(); });
+                label.append(input, document.createTextNode('仅当前关联'));
+                filters.append(label);
+            } else {
+                for (const [value, label] of [['all', '全部'], ['on', '已开启'], ['off', '已关闭']]) {
+                    const filter = button(label, () => { state.entryFilter = value; render(); }, 'filter');
+                    filter.setAttribute('aria-pressed', String(state.entryFilter === value));
+                    filters.append(filter);
+                }
+            }
+            filters.append(el('span', 'count'));
+            panel.append(filters, el('div', 'list'));
+            renderList();
+        }
+        const feedback = el('div', 'feedback');
+        feedback.setAttribute('aria-live', 'polite');
+        panel.append(feedback);
+        message();
+        const footer = el('footer', 'footer', state.view === 'entries' ? '条目开关修改原世界书，影响所有引用它的聊天。' : '点击展开 · 长按移动 · 位置自动记住');
+        panel.append(footer);
+        const list = panel.querySelector('.list');
+        if (list) list.scrollTop = oldScroll;
+        panel.querySelectorAll('details').forEach(node => { node.open = openEntries.has(node.dataset.entry); });
+        if (focusId) {
+            const replacement = [...panel.querySelectorAll('[data-focus]')].find(node => node.dataset.focus === focusId);
+            if (replacement) {
+                replacement.focus({ preventScroll: true });
+                if (selection && replacement.type !== 'range') replacement.setSelectionRange(...selection);
+            }
+        }
+    }
+
+    function renderList() {
+        const list = panel.querySelector('.list');
+        if (!list) return;
+        list.replaceChildren();
+        let shown = 0;
+        let total = 0;
+        if (state.view === 'books') {
+            const names = bridge.names().sort((a, b) => Number(Boolean(bridge.sources(b).length)) - Number(Boolean(bridge.sources(a).length)) || a.localeCompare(b, 'zh-CN'));
+            total = names.length;
+            for (const name of names) {
+                const sources = bridge.sources(name);
+                if (state.activeOnly && !sources.length) continue;
+                if (!name.toLocaleLowerCase().includes(state.bookQuery.toLocaleLowerCase().trim())) continue;
+                shown++;
+                const row = el('div', 'book-row');
+                const open = button('', () => { state.entryQuery = ''; state.entryFilter = 'all'; void loadBook(name); }, 'book-open');
+                open.disabled = state.busy;
+                open.append(el('strong', '', name));
+                const info = el('span', 'sources', sources.length ? `关联：${sources.join(' / ')}` : '未关联当前聊天');
+                open.append(info);
+                const binding = makeSwitch(`${settings.scope === 'chat' ? '当前聊天绑定' : '全局启用'}：${name}`, bridge.isBound(name, settings.scope), state.busy || (settings.scope === 'chat' && !bridge.hasChat()), enabled => toggleBinding(name, enabled));
+                row.append(open, binding);
+                list.append(row);
+            }
+            if (!shown) list.append(el('p', 'empty', total ? '没有匹配的世界书。试试其他名称，或取消筛选。' : '还没有世界书。先在酒馆中导入一本，再点击刷新。'));
+        } else {
+            const rows = entryRows(state.data);
+            total = rows.length;
+            if (state.loading) list.append(el('p', 'empty', '正在读取条目…'));
+            else if (!state.data && state.error) list.append(button('重新读取', () => void loadBook(state.book), 'retry'));
+            else for (const { key, entry } of rows) {
+                const query = state.entryQuery.trim().toLocaleLowerCase();
+                const haystack = `${entryTitle(entry)} ${(entry.key ?? []).join?.(' ') ?? ''} ${(entry.keysecondary ?? []).join?.(' ') ?? ''} ${entry.content ?? ''}`.toLocaleLowerCase();
+                if (!haystack.includes(query)) continue;
+                if (state.entryFilter === 'on' && entry.disable || state.entryFilter === 'off' && !entry.disable) continue;
+                shown++;
+                const row = el('div', `entry-row${entry.disable ? ' is-disabled' : ''}`);
+                const head = el('div', 'entry-head');
+                const detail = el('details', 'entry-detail');
+                detail.dataset.entry = key;
+                const summary = el('summary');
+                summary.append(el('strong', '', entryTitle(entry)));
+                const mode = entry.constant ? '常驻' : entry.vectorized ? '向量' : '关键词';
+                summary.append(el('span', 'entry-meta', `${mode} · #${entry.uid ?? key}${entry.disable ? ' · 已关闭' : ''}`));
+                detail.append(summary);
+                const content = el('div', 'entry-content');
+                const keys = Array.isArray(entry.key) ? entry.key.join('、') : '';
+                content.append(el('p', 'entry-keys', `关键词：${keys || '无'}`), el('p', 'entry-text', String(entry.content || '（条目内容为空）')));
+                detail.append(content);
+                const name = state.book;
+                const toggle = makeSwitch(`启用条目：${entryTitle(entry)}`, !entry.disable, state.busy, enabled => {
+                    void perform(() => bridge.toggleEntry(name, key, enabled), '条目开关已保存', data => {
+                        if (state.view === 'entries' && state.book === name) state.data = data;
+                    });
+                });
+                head.append(detail, toggle);
+                row.append(head);
+                list.append(row);
+            }
+            if (!shown && !state.loading && state.data) list.append(el('p', 'empty', total ? '没有匹配的条目。试试其他关键词或筛选。' : '这本世界书还没有条目。'));
+        }
+        const count = panel.querySelector('.count');
+        if (count) count.textContent = `${shown} / ${total}`;
+    }
+
+    function renderSettings() {
+        const body = el('div', 'settings-body');
+        body.append(el('p', 'settings-intro', '把常用的世界书，放在手边。'));
+        const sizeLabel = el('label', 'setting-label', '按钮大小');
+        sizeLabel.htmlFor = 'wbf-size';
+        const output = el('output', '', `${settings.size}px`);
+        const size = el('input', 'size-range');
+        size.id = 'wbf-size'; size.type = 'range'; size.min = '36'; size.max = '100'; size.step = '1'; size.value = String(settings.size);
+        size.dataset.focus = 'size';
+        size.addEventListener('input', () => { settings.size = Number(size.value); output.textContent = `${settings.size}px`; position(); });
+        size.addEventListener('change', persist);
+        const sizeHead = el('div', 'size-head'); sizeHead.append(sizeLabel, output);
+        body.append(sizeHead, size);
+        body.append(el('h3', '', '按钮图片'), el('p', 'hint', '上传 PNG、JPG 或 WebP，支持透明背景。'));
+        const upload = el('input');
+        upload.type = 'file'; upload.accept = 'image/png,image/jpeg,image/webp'; upload.hidden = true;
+        upload.addEventListener('change', async () => {
+            const file = upload.files?.[0];
+            if (!file) return;
+            state.error = '';
+            try {
+                if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('请上传 PNG、JPG 或 WebP 图片。');
+                if (file.size > 8 * 1024 * 1024) throw new Error('图片超过 8MB，请压缩后再上传。');
+                const bitmap = await createImageBitmap(file);
+                if (destroyed) { bitmap.close(); return; }
+                const scale = Math.min(1, 256 / Math.max(bitmap.width, bitmap.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+                canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+                canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                bitmap.close();
+                settings.image = canvas.toDataURL('image/png');
+                state.status = '按钮图片已更新';
+                persist(); position();
+            } catch (error) { state.error = error.message || '这张图片无法读取，请换一张。'; }
+            render();
+        });
+        const actions = el('div', 'setting-actions');
+        actions.append(button('上传图片', () => upload.click(), 'primary'), button('恢复默认图片', () => { settings.image = ''; persist(); position(); state.status = '已恢复默认图片'; message(); }));
+        body.append(upload, actions);
+        body.append(el('h3', '', '移动位置'), el('p', 'hint', '按住按钮约半秒，再拖到想放的位置。松开后自动保存；窗口变小时会自动留在屏幕内。'));
+        body.append(button('重置位置', () => { settings.x = DEFAULTS.x; settings.y = DEFAULTS.y; persist(); position(); state.status = '位置已重置'; message(); }));
+        body.append(el('h3', '', '默认管理范围'));
+        const scopeLabel = el('label', 'setting-label', '展开面板时使用');
+        scopeLabel.htmlFor = 'wbf-default-scope';
+        const scopeSelect = el('select', 'scope-select');
+        scopeSelect.id = 'wbf-default-scope';
+        scopeSelect.dataset.focus = 'default-scope';
+        for (const [value, text] of [['chat', '当前聊天'], ['global', '全局世界书']]) {
+            const option = el('option', '', text); option.value = value; scopeSelect.append(option);
+        }
+        scopeSelect.value = settings.defaultScope;
+        scopeSelect.addEventListener('change', () => {
+            settings.defaultScope = scopeSelect.value;
+            settings.scope = scopeSelect.value;
+            persist();
+            state.status = `默认范围已设为${scopeSelect.value === 'chat' ? '当前聊天' : '全局世界书'}`;
+            message();
+        });
+        body.append(scopeLabel, scopeSelect, el('p', 'hint', '面板顶部仍可临时切换范围；再次展开时恢复这里的选择。角色或用户绑定会单独标出；条目开关直接保存到原世界书。'));
+        panel.append(body);
+    }
+
+    launcher.addEventListener('click', event => {
+        if (Date.now() < suppressClickUntil) { event.preventDefault(); return; }
+        setOpen(!state.open, event.detail === 0);
+    });
+
+    launcher.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || drag) return;
+        const rect = launcher.getBoundingClientRect();
+        drag = { id: event.pointerId, startX: event.clientX, startY: event.clientY, dx: event.clientX - rect.left, dy: event.clientY - rect.top, active: false, movedEarly: false };
+        launcher.setPointerCapture(event.pointerId);
+        drag.timer = setTimeout(() => {
+            if (!drag || drag.movedEarly) return;
+            drag.active = true;
+            launcher.classList.add('dragging');
+            navigator.vibrate?.(15);
+        }, 450);
+    });
+
+    launcher.addEventListener('pointermove', event => {
+        if (!drag || drag.id !== event.pointerId) return;
+        if (!drag.active) {
+            if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 10) {
+                clearTimeout(drag.timer); drag.movedEarly = true;
+            }
+            return;
+        }
+        const v = viewport();
+        settings.x = clamp((event.clientX - drag.dx - v.left - 8) / Math.max(1, v.width - settings.size - 16), 0, 1);
+        settings.y = clamp((event.clientY - drag.dy - v.top - 8) / Math.max(1, v.height - settings.size - 16), 0, 1);
+        position();
+    });
+
+    function finishDrag(event) {
+        if (!drag || drag.id !== event.pointerId) return;
+        clearTimeout(drag.timer);
+        if (drag.active || drag.movedEarly || event.type === 'pointercancel') suppressClickUntil = Date.now() + 700;
+        if (drag.active) persist();
+        launcher.classList.remove('dragging');
+        drag = undefined;
+    }
+    launcher.addEventListener('pointerup', finishDrag);
+    launcher.addEventListener('pointercancel', finishDrag);
+    launcher.addEventListener('lostpointercapture', finishDrag);
+    launcher.addEventListener('contextmenu', event => event.preventDefault());
+
+    function onKey(event) {
+        if (event.key === 'Escape' && state.open) { setOpen(false, true); event.stopPropagation(); }
+        if (shadow.activeElement === launcher && event.altKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+            event.preventDefault();
+            const v = viewport();
+            const step = event.shiftKey ? 40 : 12;
+            if (event.key === 'ArrowLeft') settings.x = clamp(settings.x - step / Math.max(1, v.width - settings.size - 16), 0, 1);
+            if (event.key === 'ArrowRight') settings.x = clamp(settings.x + step / Math.max(1, v.width - settings.size - 16), 0, 1);
+            if (event.key === 'ArrowUp') settings.y = clamp(settings.y - step / Math.max(1, v.height - settings.size - 16), 0, 1);
+            if (event.key === 'ArrowDown') settings.y = clamp(settings.y + step / Math.max(1, v.height - settings.size - 16), 0, 1);
+            persist(); position();
+        }
+    }
+    shadow.addEventListener('keydown', onKey);
+    window.addEventListener('resize', position);
+    window.visualViewport?.addEventListener('resize', position);
+    window.visualViewport?.addEventListener('scroll', position);
+    position();
+
+    return {
+        /** Native changes are reflected without background polling. */
+        sync() {
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(() => {
+                if (!state.open || destroyed || state.busy) return;
+                if (state.view === 'entries') void loadBook(state.book);
+                else if (state.view === 'books') render();
+            }, 100);
+        },
+        destroy() {
+            destroyed = true;
+            state.epoch++;
+            clearTimeout(syncTimer); clearTimeout(drag?.timer);
+            window.removeEventListener('resize', position);
+            window.visualViewport?.removeEventListener('resize', position);
+            window.visualViewport?.removeEventListener('scroll', position);
+            host.remove();
+        },
+    };
+}
+
+// Synthetic data only. This preview never reads or modifies real SillyTavern data.
+const demoBooks = {
+    '雾港 · 城市与传闻': { entries: {
+        0: { uid: 0, comment: '雾港的夜晚', key: ['雾港', '夜晚'], content: '入夜后，海雾会沿石阶漫进旧城区。灯塔每隔七秒闪烁一次，渔民说那是在给归航的人指路。', constant: true, disable: false },
+        1: { uid: 1, comment: '旧书店的来客', key: ['旧书店', '店主'], content: '旧书店的店主记得每一位借书的人。靠窗的书架上，始终留着一本没有名字的笔记。', disable: false },
+        2: { uid: 2, comment: '潮汐钟楼', key: ['钟楼', '潮汐'], content: '钟楼只有在涨潮时才会报时。没有人知道谁在上面敲钟。', disable: true },
+        3: { uid: 3, comment: '未寄出的信', key: ['信件'], content: '演示条目：内容由预览生成，并非用户的真实世界书。', disable: false },
+        4: { uid: 4, comment: '地下集市', key: ['集市'], content: '每周五开放。摊贩只接受交换，不收钱币。', disable: false },
+    } },
+    '旅人 · 人物关系': { entries: { 0: { uid: 0, comment: '同行者', key: ['同行'], content: '演示人物条目。', disable: false } } },
+    '叙事规则': { entries: { 0: { uid: 0, comment: '叙事视角', key: [], content: '演示叙事规则。', constant: true, disable: false } } },
+    '很长的世界书名称用于检查窄屏自动换行以及左右边缘适配不会出现横向滚动': { entries: {} },
+    '尚未启用的支线': { entries: {} },
+};
+let currentBook = '雾港 · 城市与传闻';
+const globals = new Set(['叙事规则']);
+let failNext = false;
+const demoBridge = {
+    names: () => Object.keys(demoBooks),
+    sources: name => [currentBook === name ? '聊天' : '', globals.has(name) ? '全局' : '', name === '旅人 · 人物关系' ? '角色' : ''].filter(Boolean),
+    isBound: (name, scope) => scope === 'chat' ? currentBook === name : globals.has(name),
+    hasChat: () => true,
+    load: async name => { await new Promise(resolve => setTimeout(resolve, 80)); if (!demoBooks[name]) throw new Error('这本书已被删除。'); return structuredClone(demoBooks[name]); },
+    refresh: async () => {},
+    bind: async (name, scope, enabled) => {
+        if (scope === 'chat') currentBook = enabled ? name : '';
+        else if (enabled) globals.add(name); else globals.delete(name);
+    },
+    toggleEntry: async (name, key, enabled) => {
+        await new Promise(resolve => setTimeout(resolve, 70));
+        if (failNext) { failNext = false; throw new Error('演示：保存失败，请重试。'); }
+        setEntryEnabled(demoBooks[name], key, enabled);
+        return structuredClone(demoBooks[name]);
+    },
+};
+let previewSettings;
+try { previewSettings = normalizeSettings(JSON.parse(localStorage.getItem('wbf-preview') || '{}')); }
+catch { previewSettings = { ...DEFAULTS }; }
+const preview = mountManager({ bridge: demoBridge, settings: previewSettings, styleText: PREVIEW_STYLE,
+    saveSettings: value => localStorage.setItem('wbf-preview', JSON.stringify(value)),
+});
+window.wbfDemo = { books: demoBooks, failNext: () => { failNext = true; }, sync: () => preview.sync() };
+</script></body></html>
