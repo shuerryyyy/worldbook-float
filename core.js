@@ -1,6 +1,11 @@
 /** Pure data and geometry helpers shared by the extension and preview. */
 export const SETTINGS_KEY = 'clare_worldbook_float';
-export const DEFAULTS = Object.freeze({ size: 52, image: '', x: 0.93, y: 0.64, scope: 'chat', defaultScope: 'chat' });
+export const DEFAULTS = Object.freeze({ size: 52, image: '', x: 0.93, y: 0.64, scope: 'chat', defaultScope: 'chat', panelWidth: 390, panelHeight: 540, customCss: '' });
+export const PANEL_LIMITS = Object.freeze({
+    width: Object.freeze({ min: 300, max: 760 }),
+    height: Object.freeze({ min: 320, max: 1000 }),
+});
+export const CUSTOM_CSS_LIMIT = 200000;
 
 export function clamp(value, min, max) {
     return Math.min(Math.max(value, min), Math.max(min, max));
@@ -15,18 +20,22 @@ export function normalizeSettings(settings = {}) {
         y: clamp(finite(settings.y, DEFAULTS.y), 0, 1),
         scope: settings.scope === 'global' ? 'global' : 'chat',
         defaultScope: settings.defaultScope === 'global' ? 'global' : 'chat',
+        panelWidth: clamp(finite(settings.panelWidth, DEFAULTS.panelWidth), PANEL_LIMITS.width.min, PANEL_LIMITS.width.max),
+        panelHeight: clamp(finite(settings.panelHeight, DEFAULTS.panelHeight), PANEL_LIMITS.height.min, PANEL_LIMITS.height.max),
+        customCss: typeof settings.customCss === 'string' && settings.customCss.length <= CUSTOM_CSS_LIMIT ? settings.customCss : '',
     };
 }
 
 /** Positions everything inside the visible viewport, including keyboard/zoom offsets. */
 export function layoutFloating(settings, viewport) {
+    settings = normalizeSettings(settings);
     const { width, height, left = 0, top = 0 } = viewport;
-    const gap = 8;
-    const size = Math.min(settings.size, Math.max(24, width - gap * 2), Math.max(24, height - gap * 2));
+    const gap = Math.max(0, Math.min(8, width / 2, height / 2));
+    const size = Math.min(settings.size, Math.max(0, width - gap * 2), Math.max(0, height - gap * 2));
     const x = left + gap + settings.x * Math.max(0, width - size - gap * 2);
     const y = top + gap + settings.y * Math.max(0, height - size - gap * 2);
-    const panelWidth = Math.min(390, Math.max(0, width - gap * 2));
-    let panelHeight = Math.min(540, Math.max(0, height - gap * 2));
+    const panelWidth = Math.min(settings.panelWidth, Math.max(0, width - gap * 2));
+    let panelHeight = Math.min(settings.panelHeight, Math.max(0, height - gap * 2));
     const roomRight = left + width - x - size - gap * 2;
     const roomLeft = x - left - gap * 2;
     let panelX;

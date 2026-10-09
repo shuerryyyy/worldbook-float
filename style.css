@@ -1,4 +1,4 @@
-/* Loaded both by the manifest and inside the isolated shadow root. */
+/* Loaded only inside the isolated shadow root. */
 #clare-worldbook-float { pointer-events: none; }
 :host {
     --wbf-bg: #24282c;
@@ -120,6 +120,7 @@ summary strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 .settings-intro { margin: 2px 0 20px; color: var(--wbf-muted); font-size: 13px; }
 .size-head { display: flex; align-items: center; justify-content: space-between; }
 .size-head output { color: var(--wbf-accent); font-size: 12px; font-variant-numeric: tabular-nums; }
+.dimension-head { margin-top: 14px; }
 .size-range { width: 100%; margin: 12px 0 0; }
 .scope-select { display: block; width: 100%; margin-top: 8px; min-height: 38px; padding: 6px 10px; border: 1px solid var(--wbf-line); border-radius: 6px; background: var(--wbf-surface); color: var(--wbf-ink); }
 .setting-actions { margin-top: 12px; }

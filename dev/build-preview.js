@@ -2,10 +2,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 const core = (await read('core.js')).replace(/^export /gm, '');
+const editor = (await read('theme-editor.js')).replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
 const ui = (await read('ui.js')).replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
 const css = await read('style.css');
 const demo = await read('dev/preview.js');
-const script = `const PREVIEW_STYLE = ${JSON.stringify(css)};\n${core}\n${ui}\n${demo}`;
+const script = `const PREVIEW_STYLE = ${JSON.stringify(css)};\n${core}\n${editor}\n${ui}\n${demo}`;
 const html = `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>世界书悬浮管理 · 交互预览</title>
 <style>

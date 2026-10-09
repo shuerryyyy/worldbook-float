@@ -32,7 +32,7 @@ const server = createServer(async (request, response) => {
         }
         if (request.url === '/') {
             response.setHeader('Content-Type', 'text/html; charset=utf-8');
-            response.end(`<!doctype html><html><head><meta charset="utf-8"></head><body><select id="world_info" multiple></select><button class="chat_lorebook_button"></button>
+            response.end(`<!doctype html><html><head><meta charset="utf-8"></head><body><select id="world_info" multiple></select><button class="chat_lorebook_button"></button><div id="extensions_settings2"></div>
 <script type="module">
 import * as world from '/scripts/world-info.js';
 const handlers=new Map();const eventSource={on(event,listener){const set=handlers.get(event)||new Set();set.add(listener);handlers.set(event,set)},once(event,listener){const wrap=(...args)=>{this.removeListener(event,wrap);return listener(...args)};this.on(event,wrap)},removeListener(event,listener){handlers.get(event)?.delete(listener)},async emit(event,...args){for(const listener of [...handlers.get(event)||[]]) await listener(...args)}};
@@ -48,7 +48,7 @@ window.extension=await import('${prefix}index.js');await eventSource.emit('ready
         }
         if (request.url.startsWith(prefix)) {
             const file = request.url.slice(prefix.length);
-            if (!/^(index|core|bridge|ui)\.js$|^style\.css$|^assets\/book-open\.svg$/.test(file)) { response.writeHead(404); response.end(); return; }
+            if (!/^(index|core|bridge|ui|theme-editor)\.js$|^style\.css$|^assets\/book-open\.svg$/.test(file)) { response.writeHead(404); response.end(); return; }
             response.setHeader('Content-Type', file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css' : 'image/svg+xml');
             response.end(await readFile(new URL(`../${file}`, import.meta.url)));
             return;
@@ -83,12 +83,24 @@ try {
     await host.getByRole('button', { name: '设置', exact: true }).click();
     await host.getByRole('combobox', { name: '展开面板时使用' }).selectOption('global');
     assert.equal(await page.evaluate(() => window.savedSettings.clare_worldbook_float.defaultScope), 'global');
+    const nativeSettings = page.locator('#clare-worldbook-native-settings');
+    await nativeSettings.locator('summary').click();
+    await nativeSettings.getByRole('button', { name: '编辑悬浮窗 CSS', exact: true }).click();
+    const editor = page.locator('#clare-worldbook-theme-editor');
+    await editor.getByRole('textbox', { name: '样式代码' }).fill(':host { --wbf-accent: #abcdef; }');
+    await editor.getByRole('button', { name: '应用并保存', exact: true }).click();
+    await editor.waitFor({ state: 'detached' });
+    assert.equal(await page.evaluate(() => window.savedSettings.clare_worldbook_float.customCss), ':host { --wbf-accent: #abcdef; }');
+    await nativeSettings.getByRole('button', { name: '恢复默认美化', exact: true }).click();
+    assert.equal(await page.evaluate(() => window.savedSettings.clare_worldbook_float.customCss), '');
     await host.getByRole('button', { name: '返回', exact: true }).click();
     await host.getByRole('checkbox', { name: `全局启用：${name}`, exact: true }).check();
     await host.getByText('已全局启用', { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.testWorld.selected_world_info.length), 1);
     await page.evaluate(() => window.extension.onDisable());
     assert.equal(await page.locator('#clare-worldbook-float').count(), 0);
+    assert.equal(await nativeSettings.count(), 0);
+    assert.equal(await page.locator('#clare-worldbook-css-recovery').count(), 0);
     await page.evaluate(() => window.extension.onEnable());
     await page.locator('#clare-worldbook-float').waitFor({ state: 'attached' });
     assert.equal(await page.locator('#clare-worldbook-float').count(), 1);

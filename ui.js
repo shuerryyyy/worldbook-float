@@ -1,10 +1,11 @@
-import { clamp, DEFAULTS, entryRows, entryTitle, layoutFloating } from './core.js';
+import { clamp, DEFAULTS, PANEL_LIMITS, entryRows, entryTitle, layoutFloating } from './core.js';
+import { openThemeEditor } from './theme-editor.js';
 
 /** Isolated UI: host themes cannot accidentally break its layout or its switches. */
 export function mountManager({ bridge, settings, saveSettings, styleText }) {
     const host = document.createElement('div');
     host.id = 'clare-worldbook-float';
-    host.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:10000;';
+    host.style.cssText = 'position:fixed!important;inset:0!important;pointer-events:none!important;z-index:10000!important;';
     const shadow = host.attachShadow({ mode: 'open' });
     const stylesheet = document.createElement(styleText ? 'style' : 'link');
     if (styleText) stylesheet.textContent = styleText;
@@ -13,6 +14,20 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
         stylesheet.href = new URL('./style.css', import.meta.url).href;
     }
     shadow.append(stylesheet);
+    const customStyle = el('style');
+    customStyle.textContent = settings.customCss || '';
+    shadow.append(customStyle);
+    // This recovery control has its own shadow root, outside the user's CSS.
+    const recoveryHost = el('div');
+    recoveryHost.id = 'clare-worldbook-css-recovery';
+    recoveryHost.style.cssText = 'position:fixed;z-index:10001;';
+    const recoveryShadow = recoveryHost.attachShadow({ mode: 'open' });
+    const recoveryStyle = el('style');
+    recoveryStyle.textContent = ':host{font:12px/1.3 "Segoe UI","Microsoft YaHei",sans-serif}button{border:0;border-radius:5px;min-width:36px;min-height:28px;padding:4px 6px;background:#30363a;color:#f1f0e9;cursor:pointer;box-shadow:0 3px 10px #0005}button:hover{background:#434c48}button:focus-visible{outline:2px solid #baddb5;outline-offset:3px}';
+    const recovery = button('CSS', editTheme);
+    recovery.setAttribute('aria-label', '编辑或恢复悬浮窗 CSS');
+    recovery.title = '编辑或恢复悬浮窗 CSS';
+    recoveryShadow.append(recoveryStyle, recovery);
     const launcher = el('button', 'launcher');
     launcher.type = 'button';
     launcher.setAttribute('aria-label', '打开世界书管理；长按可移动');
@@ -32,8 +47,10 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
     let drag;
     let suppressClickUntil = 0;
     let syncTimer;
+    let themeEditor;
+    let nativeSettings;
     shadow.append(panel, launcher);
-    document.body.append(host);
+    document.body.append(host, recoveryHost);
 
     function el(tag, className = '', text = '') {
         const node = document.createElement(tag);
@@ -55,22 +72,75 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
     }
 
     function position() {
-        const p = layoutFloating(settings, viewport());
+        const v = viewport();
+        const p = layoutFloating(settings, v);
         Object.assign(launcher.style, { left: `${p.x}px`, top: `${p.y}px`, width: `${p.size}px`, height: `${p.size}px` });
         Object.assign(panel.style, { left: `${p.panelX}px`, top: `${p.panelY}px`, width: `${p.panelWidth}px`, height: `${p.panelHeight}px` });
         picture.src = settings.image || new URL('./assets/book-open.svg', import.meta.url).href;
         launcher.classList.toggle('custom-image', Boolean(settings.image));
+        recoveryHost.hidden = !settings.customCss?.trim();
+        recoveryHost.style.left = `${clamp(p.x + p.size - 14, v.left + 4, v.left + v.width - 40)}px`;
+        recoveryHost.style.top = `${clamp(p.y + p.size - 8, v.top + 4, v.top + v.height - 32)}px`;
     }
 
     function persist() { saveSettings({ ...settings }); }
 
-    function setOpen(open, focus = false) {
+    function editTheme() {
+        if (themeEditor || state.busy || destroyed) return;
+        const previousView = state.view;
+        const previousOpen = state.open;
+        const previousFocus = recoveryShadow.activeElement || shadow.activeElement || document.activeElement;
+        const restoreView = () => {
+            state.view = previousView;
+            setOpen(previousOpen, false, false);
+        };
+        themeEditor = openThemeEditor({
+            css: settings.customCss || '',
+            onPreview(css) {
+                customStyle.textContent = css;
+                state.view = 'books';
+                setOpen(true, false, false);
+            },
+            onApply(css) {
+                settings.customCss = css;
+                customStyle.textContent = css;
+                persist(); position(); restoreView();
+                state.status = css.trim() ? '自定义美化已保存' : '已恢复默认美化';
+                message();
+            },
+            onCancel() { customStyle.textContent = settings.customCss || ''; restoreView(); },
+            onReset() { settings.customCss = ''; customStyle.textContent = ''; persist(); position(); restoreView(); },
+            onClose() {
+                themeEditor = undefined;
+                if (previousFocus?.isConnected && previousFocus.getClientRects().length) previousFocus.focus();
+                else if (!recoveryHost.hidden) recovery.focus();
+                else (panel.querySelector('[data-focus="theme"]') || launcher).focus();
+            },
+        });
+    }
+
+    // Also available in native extension settings, even if a theme hides the launcher.
+    const nativeContainer = document.querySelector('#extensions_settings2') || document.querySelector('#extensions_settings');
+    if (nativeContainer) {
+        nativeSettings = el('details');
+        nativeSettings.id = 'clare-worldbook-native-settings';
+        nativeSettings.append(el('summary', '', '世界书悬浮管理'));
+        nativeSettings.append(button('编辑悬浮窗 CSS', editTheme, 'menu_button'));
+        nativeSettings.append(button('恢复默认美化', () => {
+            themeEditor?.destroy(); themeEditor = undefined;
+            settings.customCss = ''; customStyle.textContent = ''; persist(); position();
+            state.status = '已恢复默认美化'; message();
+        }, 'menu_button'));
+        nativeContainer.append(nativeSettings);
+    }
+
+    function setOpen(open, focus = false, resetScope = true) {
         state.open = open;
         panel.hidden = !open;
         launcher.setAttribute('aria-expanded', String(open));
         launcher.setAttribute('aria-label', open ? '收起世界书管理；长按可移动' : '打开世界书管理；长按可移动');
         if (open) {
-            settings.scope = settings.defaultScope;
+            if (resetScope) settings.scope = settings.defaultScope;
             position();
             if (state.view === 'entries') void loadBook(state.book);
             else render();
@@ -161,7 +231,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
         const selection = typeof active?.selectionStart === 'number' ? [active.selectionStart, active.selectionEnd] : null;
         panel.replaceChildren();
         const header = el('header', 'header');
-        const title = el('h2', '', state.view === 'settings' ? '悬浮按钮' : '世界书');
+        const title = el('h2', '', state.view === 'settings' ? '界面设置' : '世界书');
         header.append(title);
         const tools = el('div', 'tools');
         const refresh = button('刷新', async () => {
@@ -345,6 +415,28 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
         size.addEventListener('change', persist);
         const sizeHead = el('div', 'size-head'); sizeHead.append(sizeLabel, output);
         body.append(sizeHead, size);
+        body.append(el('h3', '', '展开面板大小'), el('p', 'hint', '设置宽度和高度；屏幕空间不足时会自动缩小，不会超出可视区域。'));
+        for (const [key, label, limits] of [['panelWidth', '面板宽度', PANEL_LIMITS.width], ['panelHeight', '面板高度', PANEL_LIMITS.height]]) {
+            const dimensionLabel = el('label', 'setting-label', label);
+            dimensionLabel.htmlFor = `wbf-${key}`;
+            const dimensionOutput = el('output', '', `${settings[key]}px`);
+            const dimension = el('input', 'size-range');
+            dimension.id = dimensionLabel.htmlFor; dimension.type = 'range';
+            dimension.min = String(limits.min); dimension.max = String(limits.max); dimension.step = '1'; dimension.value = String(settings[key]);
+            dimension.dataset.focus = key;
+            dimension.addEventListener('input', () => { settings[key] = Number(dimension.value); dimensionOutput.textContent = `${settings[key]}px`; position(); });
+            dimension.addEventListener('change', persist);
+            const head = el('div', 'size-head dimension-head'); head.append(dimensionLabel, dimensionOutput);
+            body.append(head, dimension);
+        }
+        body.append(button('恢复默认面板大小', () => {
+            settings.panelWidth = DEFAULTS.panelWidth; settings.panelHeight = DEFAULTS.panelHeight;
+            persist(); position(); state.status = '面板大小已重置'; render();
+        }));
+        body.append(el('h3', '', '自定义美化'), el('p', 'hint', settings.customCss?.trim() ? '自定义 CSS 使用中。点击编辑可预览、修改或恢复默认。' : '用 CSS 调整配色、字体、圆角和背景；预览满意后再应用。'));
+        const editCss = button('编辑 CSS', editTheme, 'primary');
+        editCss.dataset.focus = 'theme';
+        body.append(editCss);
         body.append(el('h3', '', '按钮图片'), el('p', 'hint', '上传 PNG、JPG 或 WebP，支持透明背景。'));
         const upload = el('input');
         upload.type = 'file'; upload.accept = 'image/png,image/jpeg,image/webp'; upload.hidden = true;
@@ -476,7 +568,9 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
             window.removeEventListener('resize', position);
             window.visualViewport?.removeEventListener('resize', position);
             window.visualViewport?.removeEventListener('scroll', position);
-            host.remove();
+            themeEditor?.destroy();
+            nativeSettings?.remove();
+            recoveryHost.remove(); host.remove();
         },
     };
 }

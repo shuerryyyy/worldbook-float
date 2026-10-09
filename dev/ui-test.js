@@ -47,11 +47,19 @@ try {
     await host.getByRole('combobox', { name: '展开面板时使用' }).selectOption('global');
     await host.getByText('默认范围已设为全局世界书', { exact: true }).waitFor();
     await host.getByRole('combobox', { name: '展开面板时使用' }).selectOption('chat');
-    const slider = host.getByRole('slider');
+    const slider = host.getByRole('slider', { name: '按钮大小', exact: true });
     await slider.fill('80');
     await slider.dispatchEvent('input');
     await slider.dispatchEvent('change');
     assert.equal(Math.round((await launcher.boundingBox()).width), 80);
+    const widthSlider = host.getByRole('slider', { name: '面板宽度', exact: true });
+    const heightSlider = host.getByRole('slider', { name: '面板高度', exact: true });
+    await widthSlider.fill('500');
+    await widthSlider.dispatchEvent('change');
+    await heightSlider.fill('620');
+    await heightSlider.dispatchEvent('change');
+    assert.equal(Math.round((await panel.boundingBox()).width), 500);
+    assert.equal(Math.round((await panel.boundingBox()).height), 620);
     const png = await page.screenshot({ clip: { x: 0, y: 0, width: 32, height: 32 } });
     await host.locator('input[type=file]').setInputFiles({ name: 'button.png', mimeType: 'image/png', buffer: png });
     await host.getByText('按钮图片已更新', { exact: true }).waitFor();
@@ -87,6 +95,8 @@ try {
     assert.equal(Math.round((await newLauncher.boundingBox()).width), 80);
     assert.ok((await newLauncher.boundingBox()).x <= 10);
     await newLauncher.click();
+    assert.equal(Math.round((await panel.boundingBox()).width), 500);
+    assert.equal(Math.round((await panel.boundingBox()).height), 620);
 
     for (const [width, height] of [[390, 844], [320, 568], [844, 390], [390, 280]]) {
         await page.setViewportSize({ width, height });

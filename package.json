@@ -1,12 +1,13 @@
 {
   "name": "worldbook-float",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "test": "node --test dev/core.test.js dev/bridge.test.js",
     "test:ui": "node dev/ui-test.js",
-    "test:integration": "node dev/integration-test.js"
+    "test:integration": "node dev/integration-test.js",
+    "test:theme": "node dev/theme-manager-test.js && node dev/theme-editor-test.js"
   },
   "devDependencies": { "playwright": "^1.56.0" }
 }

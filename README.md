@@ -1,6 +1,6 @@
 # 世界书悬浮管理
 
-在 SillyTavern / TauriTavern 聊天界面中直接查看世界书、调整绑定和条目开关。当前为 v0.1.0 试用版。
+在 SillyTavern / TauriTavern 聊天界面中直接查看世界书、调整绑定和条目开关。当前为 v0.2.0。
 
 ## 链接安装（推荐）
 
@@ -19,6 +19,8 @@ https://github.com/shuerryyyy/worldbook-float
 - 点击书本按钮展开，再次点击收起。也可点击面板的「收起」或按 Escape。
 - 按住按钮约 450 毫秒，再拖动；松手后自动保存位置。支持鼠标和触屏。
 - 「设置」里上传 PNG / JPG / WebP 图片，设置 36–100px 按钮大小，或重置图片和位置。图片在本地缩至最长边 256px，保存到当前酒馆用户的扩展设置，不发送到外部服务。
+- 「设置 → 展开面板大小」分别调整宽度（300–760px）和高度（320–1000px），默认 390 × 540px。屏幕空间不足时自动缩小；原有按钮图片、位置和大小会保留。
+- 「设置 → 自定义美化 → 编辑 CSS」编辑、预览、应用或恢复默认。预览不会保存，关闭编辑器会撤销未应用的预览。应用后保存到当前酒馆用户的扩展设置，刷新后仍有效。
 - 面板根据可视区域向内展开，支持左右边缘、手机横屏、窗口缩放及软键盘导致的视口变化。
 - 点击书名查看条目；点击条目名称展开内容；条目支持名称、关键词和正文搜索。
 - 条目开关保留内容、关键词、触发策略及其他扩展的自定义字段。
@@ -33,7 +35,7 @@ https://github.com/shuerryyyy/worldbook-float
 
 ## 本地安装
 
-将整个 `worldbook-float` 文件夹（包含 `manifest.json`、四个 JS 文件、`style.css`、`assets`）复制到：
+将整个 `worldbook-float` 文件夹（包含 `manifest.json`、五个 JS 文件、`style.css`、`assets`）复制到：
 
 ```text
 SillyTavern/public/scripts/extensions/third-party/worldbook-float/
@@ -51,11 +53,38 @@ SillyTavern/data/<用户目录>/extensions/worldbook-float/
 
 直接双击 `preview.html`。这是带虚构世界书的交互演示，可测试移动、图片、大小和开关；它不会读取或修改真实酒馆数据。预览设置与实际插件设置分开存储。
 
+## 自定义 CSS
+
+样式仅注入管理器自己的 Shadow DOM，不会修改聊天页面或原生世界书编辑器。修改主题变量时请使用 `:host`（不是 `:root`）：
+
+```css
+:host {
+    --wbf-bg: #f5f2ea;
+    --wbf-surface: #e9e4d8;
+    --wbf-ink: #292d27;
+    --wbf-muted: #596253;
+    --wbf-line: #c7cebd;
+    --wbf-accent: #456b42;
+    --wbf-on-accent: #ffffff;
+    --wbf-error: #a13326;
+    color-scheme: light;
+}
+.panel { border-radius: 20px; }
+```
+
+常用选择器：`.panel` 面板、`.launcher` 悬浮按钮、`.header` 标题栏、`.book-row` 世界书行、`.entry-row` 条目行、`.search` 搜索框。宽高推荐使用设置中的滑条；CSS 覆盖布局时由你自行控制。
+
+CSS 编辑器及预览操作条独立于自定义样式。应用 CSS 后，按钮旁会出现独立的「CSS」入口；即使自定义样式隐藏了管理器，也可以通过它修改或恢复默认。在酒馆原生扩展设置中也提供「编辑悬浮窗 CSS」和「恢复默认美化」。单份 CSS 上限为 200000 字符，浏览器会忽略无效的 CSS 规则。
+
+这套编辑、预览与应用功能为独立实现；内置示例及界面使用本项目自己的代码和样式。
+
 ## 兼容性与验证
 
 兼容目标是 SillyTavern 1.13+；实际接口按 2026-10-09 读取的官方 release 源码实现。依赖官方 `SillyTavern.getContext()`、世界书读写 HTTP 接口，以及 `/scripts/world-info.js` 导出的世界书缓存和绑定状态。内部导出在未来版本可能变化；启动时会检查必要接口。
 
-TauriTavern 使用兼容的酒馆前端和世界书接口，本插件为纯前端扩展；已对照官方项目源码检查安装流程及相关接口。**尚未在真实 TauriTavern 实例完成安装和读写测试**，不同版本、平台及云酒馆供应商的扩展限制仍需实测。如果启动失败，先查看扩展是否启用及应用控制台中带 `[worldbook-float]` 的错误。
+TauriTavern 使用兼容的酒馆前端和世界书接口，本插件为纯前端扩展；已对照官方项目源码检查安装流程及相关接口。用户已反馈 **v0.1.0 在真实 TauriTavern 中安装使用正常**；v0.2.0 新增功能完成模拟宿主及浏览器测试，仍需要实机反馈。不同版本、平台及云酒馆供应商的扩展限制仍需实测。如果启动失败，先查看扩展是否启用及应用控制台中带 `[worldbook-float]` 的错误。
+
+后续更新保持同一仓库地址，在 TT 扩展管理里手动更新这个扩展，再刷新或重启即可；不用删除重装。TT 按 Git 提交检查更新。图片、位置、范围及 CSS 保存于宿主用户设置中，正常更新会保留；本插件的 `auto_update: false` 不妨碍手动更新。
 
 已用模拟酒馆接口验证保存成功、HTTP 失败、连续写入、切换聊天、数据字段保留；用浏览器验证桌面和手机交互。同一本世界书若仍有原生待保存修改，会等待原生缓存与磁盘一致后再写入，最多等待 5 秒，超时提示重试；不会取消其他世界书的原生延迟保存任务。**尚未连接用户的真实 SillyTavern 实例完成实机测试**。多个浏览器标签页同时编辑同一本世界书时，酒馆的整本保存机制不能保证跨标签页冲突合并。
 
@@ -67,6 +96,7 @@ npm test
 node dev/build-preview.js
 npm run test:ui
 npm run test:integration
+npm run test:theme
 ```
 
 浏览器测试默认使用 Windows Edge，可按本机路径修改 `dev/ui-test.js`。开发用的 `node_modules`、测试源码、截图和上游参考源码不需要分发。
