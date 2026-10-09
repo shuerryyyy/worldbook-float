@@ -38,7 +38,8 @@ import * as world from '/scripts/world-info.js';
 const handlers=new Map();const eventSource={on(event,listener){const set=handlers.get(event)||new Set();set.add(listener);handlers.set(event,set)},once(event,listener){const wrap=(...args)=>{this.removeListener(event,wrap);return listener(...args)};this.on(event,wrap)},removeListener(event,listener){handlers.get(event)?.delete(listener)},async emit(event,...args){for(const listener of [...handlers.get(event)||[]]) await listener(...args)}};
 const select=document.querySelector('#world_info');select.append(new Option(world.world_names[0],'0'));
 window.jQuery=value=>typeof value==='function'?value():({trigger(event){if(value===select&&event==='change')world.selectGlobal([...select.selectedOptions].map(option=>option.textContent))}});
-const ctx={extensionSettings:{},eventTypes:{APP_READY:'ready',WORLDINFO_UPDATED:'world-update',WORLDINFO_SETTINGS_UPDATED:'settings-update',CHAT_CHANGED:'chat-change'},eventSource,chatId:'chat1',characterId:0,chatMetadata:{},characters:[],groups:[],powerUserSettings:{},getRequestHeaders:()=>({'Content-Type':'application/json','X-CSRF-Token':'fixture'}),getWorldInfoNames:()=>world.world_names,saveMetadata:async()=>{window.savedMetadata=structuredClone(ctx.chatMetadata)},saveSettingsDebounced:()=>{window.savedSettings=structuredClone(ctx.extensionSettings)},updateWorldInfoList:async()=>{},reloadWorldInfoEditor:()=>{}};
+let liveMetadata={};
+const ctx={extensionSettings:{},eventTypes:{APP_READY:'ready',WORLDINFO_UPDATED:'world-update',WORLDINFO_SETTINGS_UPDATED:'settings-update',CHAT_CHANGED:'chat-change'},eventSource,chatId:'chat1',characterId:0,get chatMetadata(){return structuredClone(liveMetadata)},updateChatMetadata:patch=>{liveMetadata={...liveMetadata,...patch}},characters:[],groups:[],powerUserSettings:{},getRequestHeaders:()=>({'Content-Type':'application/json','X-CSRF-Token':'fixture'}),getWorldInfoNames:()=>world.world_names,saveMetadata:async()=>{window.savedMetadata=structuredClone(liveMetadata)},saveSettingsDebounced:()=>{window.savedSettings=structuredClone(ctx.extensionSettings)},updateWorldInfoList:async()=>{},reloadWorldInfoEditor:()=>{}};
 ctx.loadWorldInfo=async name=>world.worldInfoCache.has(name)?structuredClone(world.worldInfoCache.get(name)):await (await fetch('/api/worldinfo/get',{method:'POST',headers:ctx.getRequestHeaders(),body:JSON.stringify({name})})).json();
 ctx.saveWorldInfo=async(name,data,immediately)=>{if(!immediately)throw Error('must save immediately');world.worldInfoCache.set(name,structuredClone(data));await fetch('/api/worldinfo/edit',{method:'POST',headers:ctx.getRequestHeaders(),body:JSON.stringify({name,data})});await eventSource.emit('world-update',name,data)};
 window.SillyTavern={getContext:()=>ctx};window.testContext=ctx;window.testWorld=world;
@@ -67,6 +68,8 @@ try {
     await host.getByRole('checkbox', { name: `当前聊天绑定：${name}`, exact: true }).check();
     await host.getByText('已绑定到当前聊天', { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.savedMetadata.world_info), name);
+    assert.equal(await page.evaluate(() => window.testContext.chatMetadata.world_info), name);
+    assert.equal(await page.evaluate(() => window.testWorld.selected_world_info.length), 0);
     await host.getByRole('button', { name, exact: false }).click();
     const toggle = host.getByRole('checkbox', { name: '启用条目：测试条目', exact: true });
     await toggle.uncheck();

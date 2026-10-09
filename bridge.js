@@ -105,22 +105,29 @@ export function createBridge({ context, world, request = fetch, jquery = globalT
             const ctx = context();
             if (!hasChat(ctx)) throw new Error('请先打开一个聊天，再绑定世界书。');
             if (identity !== chatIdentity(ctx)) throw new Error('聊天已切换，请在新聊天中重试。');
-            const metadata = ctx.chatMetadata;
-            const old = metadata[chatKey];
-            if (enabled) metadata[chatKey] = name;
-            else if (old === name) delete metadata[chatKey];
-            else return;
+            if (!ctx.chatMetadata || typeof ctx.chatMetadata !== 'object') throw new Error('当前聊天状态尚未就绪，请刷新后重试。');
+            const old = ctx.chatMetadata[chatKey];
+            if (!enabled && old !== name) return;
+            const next = enabled ? name : undefined;
+            const apply = (target, value) => {
+                // Prefer the public setter: some hosts return metadata snapshots.
+                if (typeof target.updateChatMetadata === 'function') target.updateChatMetadata({ [chatKey]: value });
+                else if (value === undefined) delete target.chatMetadata[chatKey];
+                else target.chatMetadata[chatKey] = value;
+            };
             try {
-                await ctx.saveMetadata();
+                apply(ctx, next);
+                const current = context();
+                if (identity !== chatIdentity(current)) throw new Error('聊天已切换，请在新聊天中重试。');
+                if (current.chatMetadata?.[chatKey] !== next) throw new Error('酒馆未接受聊天绑定，请刷新后重试。');
+                await current.saveMetadata();
             } catch (error) {
-                if (context().chatMetadata === metadata && identity === chatIdentity(context())) {
-                    if (old === undefined) delete metadata[chatKey];
-                    else metadata[chatKey] = old;
-                }
+                const current = context();
+                if (identity === chatIdentity(current) && current.chatMetadata?.[chatKey] === next) apply(current, old);
                 throw error;
             }
             if (identity === chatIdentity(context())) {
-                doc.querySelectorAll('.chat_lorebook_button').forEach(button => button.classList.toggle('world_set', Boolean(metadata[chatKey])));
+                doc.querySelectorAll('.chat_lorebook_button').forEach(button => button.classList.toggle('world_set', Boolean(context().chatMetadata?.[chatKey])));
             }
         });
     }

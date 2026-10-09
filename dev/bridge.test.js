@@ -85,6 +85,45 @@ test('queued chat binding cannot affect a new chat after switching', async () =>
     assert.deepEqual(next.chatMetadata, {});
 });
 
+test('chat-only binding uses the public setter with snapshot contexts and persists independently of globals', async () => {
+    const f = fixture();
+    let metadata = { otherPlugin: { keep: true } };
+    let persisted;
+    const context = () => ({ ...f.ctx, chatMetadata: structuredClone(metadata),
+        updateChatMetadata: patch => { metadata = { ...metadata, ...patch }; },
+        saveMetadata: async () => { persisted = JSON.parse(JSON.stringify(metadata)); },
+    });
+    const bridge = createBridge({ context, world: f.world, document: { querySelectorAll: () => [] } });
+    await bridge.bind('世界 A', 'chat', true);
+    assert.equal(persisted.world_info, '世界 A');
+    assert.equal(bridge.isBound('世界 A', 'chat'), true);
+    assert.deepEqual(f.world.selected_world_info, []);
+    assert.deepEqual(metadata.otherPlugin, { keep: true });
+    await bridge.bind('世界 A', 'chat', false);
+    assert.equal(bridge.isBound('世界 A', 'chat'), false);
+    assert.equal(Object.hasOwn(persisted, 'world_info'), false);
+});
+
+test('a detached metadata snapshot without a setter cannot report a successful binding', async () => {
+    const f = fixture();
+    let saves = 0;
+    const bridge = createBridge({ context: () => ({ ...f.ctx, chatMetadata: {}, saveMetadata: async () => { saves++; } }), world: f.world });
+    await assert.rejects(bridge.bind('世界 A', 'chat', true), /未接受聊天绑定/);
+    assert.equal(saves, 0);
+});
+
+test('public metadata setter rolls back only its binding when saving fails', async () => {
+    const f = fixture();
+    let metadata = { world_info: '旧世界书', unrelated: '保留' };
+    const context = () => ({ ...f.ctx, chatMetadata: structuredClone(metadata),
+        updateChatMetadata: patch => { metadata = { ...metadata, ...patch }; },
+        saveMetadata: async () => { metadata.unrelated = '其他插件的新修改'; throw new Error('metadata failed'); },
+    });
+    const bridge = createBridge({ context, world: f.world });
+    await assert.rejects(bridge.bind('世界 A', 'chat', true), /metadata failed/);
+    assert.deepEqual(metadata, { world_info: '旧世界书', unrelated: '其他插件的新修改' });
+});
+
 test('metadata rejection restores prior binding without touching a different chat', async () => {
     const f = fixture();
     f.ctx.chatMetadata.world_info = '旧世界书';

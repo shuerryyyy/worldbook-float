@@ -17,17 +17,6 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
     const customStyle = el('style');
     customStyle.textContent = settings.customCss || '';
     shadow.append(customStyle);
-    // This recovery control has its own shadow root, outside the user's CSS.
-    const recoveryHost = el('div');
-    recoveryHost.id = 'clare-worldbook-css-recovery';
-    recoveryHost.style.cssText = 'position:fixed;z-index:10001;';
-    const recoveryShadow = recoveryHost.attachShadow({ mode: 'open' });
-    const recoveryStyle = el('style');
-    recoveryStyle.textContent = ':host{font:12px/1.3 "Segoe UI","Microsoft YaHei",sans-serif}button{border:0;border-radius:5px;min-width:36px;min-height:28px;padding:4px 6px;background:#30363a;color:#f1f0e9;cursor:pointer;box-shadow:0 3px 10px #0005}button:hover{background:#434c48}button:focus-visible{outline:2px solid #baddb5;outline-offset:3px}';
-    const recovery = button('CSS', editTheme);
-    recovery.setAttribute('aria-label', '编辑或恢复悬浮窗 CSS');
-    recovery.title = '编辑或恢复悬浮窗 CSS';
-    recoveryShadow.append(recoveryStyle, recovery);
     const launcher = el('button', 'launcher');
     launcher.type = 'button';
     launcher.setAttribute('aria-label', '打开世界书管理；长按可移动');
@@ -50,7 +39,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
     let themeEditor;
     let nativeSettings;
     shadow.append(panel, launcher);
-    document.body.append(host, recoveryHost);
+    document.body.append(host);
 
     function el(tag, className = '', text = '') {
         const node = document.createElement(tag);
@@ -78,9 +67,6 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
         Object.assign(panel.style, { left: `${p.panelX}px`, top: `${p.panelY}px`, width: `${p.panelWidth}px`, height: `${p.panelHeight}px` });
         picture.src = settings.image || new URL('./assets/book-open.svg', import.meta.url).href;
         launcher.classList.toggle('custom-image', Boolean(settings.image));
-        recoveryHost.hidden = !settings.customCss?.trim();
-        recoveryHost.style.left = `${clamp(p.x + p.size - 14, v.left + 4, v.left + v.width - 40)}px`;
-        recoveryHost.style.top = `${clamp(p.y + p.size - 8, v.top + 4, v.top + v.height - 32)}px`;
     }
 
     function persist() { saveSettings({ ...settings }); }
@@ -89,7 +75,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
         if (themeEditor || state.busy || destroyed) return;
         const previousView = state.view;
         const previousOpen = state.open;
-        const previousFocus = recoveryShadow.activeElement || shadow.activeElement || document.activeElement;
+        const previousFocus = shadow.activeElement || document.activeElement;
         const restoreView = () => {
             state.view = previousView;
             setOpen(previousOpen, false, false);
@@ -113,7 +99,6 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
             onClose() {
                 themeEditor = undefined;
                 if (previousFocus?.isConnected && previousFocus.getClientRects().length) previousFocus.focus();
-                else if (!recoveryHost.hidden) recovery.focus();
                 else (panel.querySelector('[data-focus="theme"]') || launcher).focus();
             },
         });
@@ -224,12 +209,16 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
 
     function render() {
         if (destroyed) return;
-        const oldScroll = panel.querySelector('.list')?.scrollTop ?? 0;
+        const oldScroller = panel.querySelector('.panel-scroll');
+        const oldScroll = oldScroller?.dataset.view === state.view ? oldScroller.scrollTop : 0;
         const openEntries = new Set([...panel.querySelectorAll('details[open]')].map(node => node.dataset.entry));
         const active = shadow.activeElement;
         const focusId = active?.dataset.focus;
         const selection = typeof active?.selectionStart === 'number' ? [active.selectionStart, active.selectionEnd] : null;
         panel.replaceChildren();
+        const scroller = el('div', 'panel-scroll');
+        scroller.dataset.view = state.view;
+        panel.append(scroller);
         const header = el('header', 'header');
         const title = el('h2', '', state.view === 'settings' ? '界面设置' : '世界书');
         header.append(title);
@@ -266,7 +255,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
         close.dataset.allowBusy = 'true';
         tools.append(refresh, options, close);
         header.append(tools);
-        panel.append(header);
+        scroller.append(header);
         if (state.view === 'settings') renderSettings();
         else {
             const scope = el('div', 'scope');
@@ -280,13 +269,21 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
             }
             scope.append(tabs);
             scope.append(el('p', 'hint', settings.scope === 'chat' ? (bridge.hasChat() ? '当前聊天可绑定一本书；开启另一本会替换绑定。' : '先打开聊天，即可在这里绑定世界书。') : '此处的总开关影响所有聊天的全局世界书。'));
-            panel.append(scope);
+            scroller.append(scope);
             if (state.view === 'entries') {
                 const breadcrumb = el('div', 'breadcrumb');
                 const back = button('返回列表', () => { state.epoch++; state.loading = false; state.view = 'books'; state.error = ''; state.status = ''; render(); });
                 back.disabled = state.busy;
                 breadcrumb.append(back, el('strong', 'book-name', state.book));
-                panel.append(breadcrumb);
+                scroller.append(breadcrumb);
+                const binding = el('div', 'entry-binding');
+                const bound = bridge.isBound(state.book, settings.scope);
+                const bindingText = el('div', 'entry-binding-text');
+                bindingText.append(el('strong', '', settings.scope === 'chat' ? '用于当前聊天' : '全局启用这本书'));
+                bindingText.append(el('p', 'hint', bound ? '此范围已启用；下面的条目仍按各自触发规则生效。' : '此范围尚未启用。仅打开下面的条目，不会自动绑定这本书。'));
+                const name = state.book;
+                binding.append(bindingText, makeSwitch(`${settings.scope === 'chat' ? '当前聊天绑定' : '全局启用'}：${name}`, bound, state.busy || (settings.scope === 'chat' && !bridge.hasChat()), enabled => toggleBinding(name, enabled)));
+                scroller.append(binding);
             }
             const search = el('input', 'search');
             search.type = 'search';
@@ -299,7 +296,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
                 else state.entryQuery = search.value;
                 renderList();
             });
-            panel.append(search);
+            scroller.append(search);
             const filters = el('div', 'filters');
             if (state.view === 'books') {
                 const label = el('label', 'filter-label');
@@ -316,17 +313,15 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
                 }
             }
             filters.append(el('span', 'count'));
-            panel.append(filters, el('div', 'list'));
+            scroller.append(filters, el('div', 'list'));
             renderList();
         }
         const feedback = el('div', 'feedback');
         feedback.setAttribute('aria-live', 'polite');
-        panel.append(feedback);
+        scroller.append(feedback);
         message();
         const footer = el('footer', 'footer', state.view === 'entries' ? '条目开关修改原世界书，影响所有引用它的聊天。' : '点击展开 · 长按移动 · 位置自动记住');
-        panel.append(footer);
-        const list = panel.querySelector('.list');
-        if (list) list.scrollTop = oldScroll;
+        scroller.append(footer);
         panel.querySelectorAll('details').forEach(node => { node.open = openEntries.has(node.dataset.entry); });
         if (focusId) {
             const replacement = [...panel.querySelectorAll('[data-focus]')].find(node => node.dataset.focus === focusId);
@@ -335,6 +330,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
                 if (selection && replacement.type !== 'range') replacement.setSelectionRange(...selection);
             }
         }
+        scroller.scrollTop = oldScroll;
     }
 
     function renderList() {
@@ -484,7 +480,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
             message();
         });
         body.append(scopeLabel, scopeSelect, el('p', 'hint', '面板顶部仍可临时切换范围；再次展开时恢复这里的选择。角色或用户绑定会单独标出；条目开关直接保存到原世界书。'));
-        panel.append(body);
+        panel.querySelector('.panel-scroll').append(body);
     }
 
     launcher.addEventListener('click', event => {
@@ -570,7 +566,7 @@ export function mountManager({ bridge, settings, saveSettings, styleText }) {
             window.visualViewport?.removeEventListener('scroll', position);
             themeEditor?.destroy();
             nativeSettings?.remove();
-            recoveryHost.remove(); host.remove();
+            host.remove();
         },
     };
 }

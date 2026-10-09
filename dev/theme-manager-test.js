@@ -20,7 +20,7 @@ try {
     const panel = manager.locator('.panel');
     const launcher = manager.locator('.launcher');
     const editor = page.locator('#clare-worldbook-theme-editor');
-    const recovery = page.locator('#clare-worldbook-css-recovery');
+    const nativeSettings = page.locator('#clare-worldbook-native-settings');
     const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('wbf-preview')));
     const panelColor = () => panel.evaluate(node => getComputedStyle(node).backgroundColor);
     const theme = ':host { --wbf-bg: #112233; }\n.panel { border-radius: 23px; }';
@@ -53,27 +53,30 @@ try {
     assert.equal((await saved()).customCss, theme);
     assert.equal((await saved()).size, 68);
     assert.equal((await saved()).defaultScope, 'global');
-    assert.equal(await recovery.isVisible(), true);
+    assert.equal(await page.locator('#clare-worldbook-css-recovery').count(), 0);
     await page.reload();
     await launcher.waitFor();
     await launcher.click();
     assert.equal(await panelColor(), 'rgb(17, 34, 51)');
-    await recovery.getByRole('button').click();
+    await manager.getByRole('button', { name: '设置', exact: true }).click();
+    await manager.getByRole('button', { name: '编辑 CSS', exact: true }).click();
     // A broken user stylesheet must never take away the recovery/editor controls.
     await editor.getByRole('textbox').fill('.panel, .launcher { display: none !important; }');
     await editor.getByRole('button', { name: '应用并保存', exact: true }).click();
     await editor.waitFor({ state: 'detached' });
     assert.equal(await launcher.isVisible(), false);
     assert.equal(await panel.isVisible(), false);
-    await recovery.getByRole('button').click();
+    await page.locator('#preview-extension-settings > summary').click();
+    await nativeSettings.locator('summary').click();
+    await nativeSettings.getByRole('button', { name: '编辑悬浮窗 CSS', exact: true }).click();
     await editor.getByRole('button', { name: '恢复默认', exact: true }).click();
     await editor.getByText('默认样式已恢复并保存。', { exact: true }).waitFor();
     assert.equal((await saved()).customCss, '');
     assert.equal(await launcher.isVisible(), true);
     await editor.getByRole('button', { name: '关闭 CSS 编辑器' }).click();
     await editor.waitFor({ state: 'detached' });
+    await page.locator('#preview-extension-settings > summary').click();
 
-    await manager.getByRole('button', { name: '设置', exact: true }).click();
     await manager.getByRole('button', { name: '编辑 CSS', exact: true }).click();
     await editor.getByRole('button', { name: '填入浅色示例' }).click();
     await page.screenshot({ path: fileURLToPath(new URL('theme-editor-desktop.png', screenshots)) });
